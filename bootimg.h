@@ -50,6 +50,8 @@ struct boot_img_hdr
 
     uint8_t cmdline[BOOT_ARGS_SIZE];
 
+    uint32_t os_version;
+
     uint32_t id[8]; /* timestamp / checksum / sha1 / etc */
 
     /* Supplemental command line data; kept here to maintain

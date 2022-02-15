@@ -72,6 +72,8 @@ int usage(void)
             "       [ --tags_offset <address> ]\n"
             "       [ --id ]\n"
             "       [ --signature <filename> ]\n"
+            "       [ --os_version <A.B.C version> ]\n"
+            "       [ --os_patch_level <YYYY-MM-DD date> ]\n"
             "       -o|--output <filename>\n"
             );
     return 1;
@@ -108,6 +110,29 @@ int write_padding(int fd, unsigned pagesize, unsigned itemsize)
     }
 }
 
+int parse_os_version(char *ver)
+{
+    int a = 0, b = 0, c = 0;
+    int i = sscanf(ver, "%u.%u.%u", &a, &b, &c);
+
+    if((i >= 1) && (a < 128) && (b < 128) && (c < 128)) {
+        return (a << 14) | (b << 7) | c;
+    }
+    return 0;
+}
+
+int parse_os_patch_level(char *lvl)
+{
+    int y = 0, m = 0;
+    int i = sscanf(lvl, "%u-%u", &y, &m);
+    y -= 2000;
+
+    if((i == 2) && (y >= 0) && (y < 128) && (m > 0) && (m <= 12)) {
+        return (y << 4) | m;
+    }
+    return 0;
+}
+
 int main(int argc, char **argv)
 {
     boot_img_hdr hdr;
@@ -130,6 +155,8 @@ int main(int argc, char **argv)
     int fd;
     SHA_CTX ctx;
     const uint8_t* sha;
+    int os_version = 0;
+    int os_patch_level;
     uint32_t base           = 0x10000000U;
     uint32_t kernel_offset  = 0x00008000U;
     uint32_t ramdisk_offset = 0x01000000U;
@@ -195,6 +222,10 @@ int main(int argc, char **argv)
                 dt_fn = val;
             } else if(!strcmp(arg, "--signature")) {
                 sig_fn = val;
+            } else if(!strcmp(arg, "--os_version")) {
+                os_version = parse_os_version(val);
+            } else if(!strcmp(arg, "--os_patch_level")) {
+                os_patch_level = parse_os_patch_level(val);
             } else {
                 return usage();
             }
@@ -209,6 +240,8 @@ int main(int argc, char **argv)
     hdr.second_addr =  base + second_offset;
     hdr.tags_addr =    base + tags_offset;
     hdr.unknown =      unknown;
+
+    hdr.os_version = (os_version << 11) | os_patch_level;
 
     if(bootimg == 0) {
         fprintf(stderr,"error: no output filename specified\n");
