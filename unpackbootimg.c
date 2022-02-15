@@ -14,6 +14,8 @@
 
 typedef unsigned char byte;
 
+int a = 0, b = 0, c = 0, y = 0, m = 0; // header.os_version component calculation variables
+
 int read_padding(FILE* f, unsigned itemsize, int pagesize)
 {
     byte* buf = (byte*)malloc(sizeof(byte) * pagesize);
@@ -38,6 +40,28 @@ void write_string_to_file(char* file, char* string)
     fwrite(string, strlen(string), 1, f);
     fwrite("\n", 1, 1, f);
     fclose(f);
+}
+
+int print_os_version(uint32_t hdr_os_ver)
+{
+    if(hdr_os_ver != 0) {
+        int os_version = 0, os_patch_level = 0;
+        os_version = hdr_os_ver >> 11;
+        os_patch_level = hdr_os_ver&0x7ff;
+
+        a = (os_version >> 14)&0x7f;
+        b = (os_version >> 7)&0x7f;
+        c = os_version&0x7f;
+
+        y = (os_patch_level >> 4) + 2000;
+        m = os_patch_level&0xf;
+    }
+    if((a < 128) && (b < 128) && (c < 128) && (y >= 2000) && (y < 2128) && (m > 0) && (m <= 12)) {
+        printf("BOARD_OS_VERSION %d.%d.%d\n", a, b, c);
+        printf("BOARD_OS_PATCH_LEVEL %d-%02d\n", y, m);
+        return 0;
+    }
+    return 1;
 }
 
 int usage() {
@@ -126,6 +150,9 @@ int main(int argc, char** argv)
     printf("BOARD_RAMDISK_OFFSET 0x%08x\n", header.ramdisk_addr - base);
     printf("BOARD_SECOND_OFFSET 0x%08x\n", header.second_addr - base);
     printf("BOARD_TAGS_OFFSET 0x%08x\n",header.tags_addr - base);
+    if(print_os_version(header.os_version) == 1) {
+        header.os_version = 0;
+    }
     if (header.dt_size != 0) {
         printf("BOARD_DT_SIZE %d\n", header.dt_size);
     }
@@ -186,6 +213,22 @@ int main(int argc, char** argv)
     char tagstmp[200];
     sprintf(tagstmp, "0x%08x", header.tags_addr - base);
     write_string_to_file(tmp, tagstmp);
+
+    if(header.os_version != 0) {
+        //printf("os_version...\n");
+        sprintf(tmp, "%s/%s", directory, basename(filename));
+        strcat(tmp, "-os_version");
+        char os_versiontmp[200];
+        sprintf(os_versiontmp, "%d.%d.%d", a, b, c);
+        write_string_to_file(tmp, os_versiontmp);
+
+        //printf("os_patch_level...\n");
+        sprintf(tmp, "%s/%s", directory, basename(filename));
+        strcat(tmp, "-os_patch_level");
+        char os_patch_leveltmp[200];
+        sprintf(os_patch_leveltmp, "%d", y, m);
+        write_string_to_file(tmp, os_patch_leveltmp);
+    }
 
     //printf("unknown...\n");
     sprintf(tmp, "%s/%s", directory, basename(filename));
