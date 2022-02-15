@@ -226,7 +226,7 @@ int main(int argc, char** argv)
         sprintf(tmp, "%s/%s", directory, basename(filename));
         strcat(tmp, "-os_patch_level");
         char os_patch_leveltmp[200];
-        sprintf(os_patch_leveltmp, "%d", y, m);
+        sprintf(os_patch_leveltmp, "%d.%d", y, m);
         write_string_to_file(tmp, os_patch_leveltmp);
     }
 
